@@ -1201,7 +1201,7 @@ namespace Oxide.Plugins
             HookCalled("OnLoseCondition");
         }
 
-        private int OnMaxStackable(Item item, Item targetItem)
+        private int OnMaxStackable(Item item)
         {
             HookCalled("OnMaxStackable");
             return 100;
