@@ -885,7 +885,7 @@ namespace Oxide.Plugins
             return true;
         }
 
-        private bool CanNpcEat(BaseNpc npc, BaseCombatEntity target)
+        private bool CanNpcEat(BaseNpc npc, BaseEntity target)
         {
             HookCalled("CanNpcEat");
             return true;
