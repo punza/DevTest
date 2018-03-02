@@ -1,14 +1,15 @@
 #define DEBUG
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Reflection;
 using Oxide.Core;
 using Oxide.Core.Libraries.Covalence;
 using Oxide.Core.Plugins;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 #if REIGNOFKINGS
 using CodeHatch.Blocks.Networking.Events;
+using CodeHatch.Common;
+using CodeHatch.Engine.Core.Commands;
 using CodeHatch.Engine.Core.Networking;
 using CodeHatch.Engine.Networking;
 using CodeHatch.Networking.Events;
@@ -44,22 +45,28 @@ namespace Oxide.Plugins
             LogWarning(hookCount == 0 ? "All hooks verified!" : $"{hooksVerified} hooks verified, {hookCount} hooks remaining");
         }
 
-        #endregion
+        #endregion Hook Verification
 
         #region Plugin Hooks (universal)
 
         private void Init()
         {
-            hookCount = hooks.Count;
-            hooksRemaining = hooks.Keys.ToDictionary(k => k, k => true);
-            LogWarning("{0} hook to test!", hookCount);
+            hookCount = Hooks.Count;
+            hooksRemaining = Hooks.Keys.ToDictionary(k => k, k => true);
+            LogWarning("{0} hook(s) to test!", hookCount);
 
             HookCalled("Init");
         }
 
-        protected override void LoadDefaultConfig() => HookCalled("LoadDefaultConfig");
+        private new void LoadDefaultConfig()
+        {
+            HookCalled("LoadDefaultConfig");
+        }
 
-        private new void LoadDefaultMessages() => HookCalled("LoadDefaultMessages");
+        private new void LoadDefaultMessages()
+        {
+            HookCalled("LoadDefaultMessages");
+        }
 
         private void Loaded() => HookCalled("Loaded");
 
@@ -67,21 +74,21 @@ namespace Oxide.Plugins
 
         private void OnFrame() => HookCalled("OnFrame");
 
-        private void OnPluginLoaded(Plugin name)
+        private void OnPluginLoaded(Plugin plugin)
         {
-            LogWarning($"Plugin '{name}' has been loaded");
+            LogWarning($"Plugin '{plugin.Name}' has been loaded");
 
             HookCalled("OnPluginLoaded");
         }
 
-        private void OnPluginUnloaded(Plugin name)
+        private void OnPluginUnloaded(Plugin plugin)
         {
-            LogWarning($"Plugin '{name}' has been unloaded");
+            LogWarning($"Plugin '{plugin.Name}' has been unloaded");
 
             HookCalled("OnPluginUnloaded");
         }
 
-        #endregion
+        #endregion Plugin Hooks (universal)
 
         #region Server Hooks (universal)
 
@@ -111,42 +118,42 @@ namespace Oxide.Plugins
             HookCalled("OnServerShutdown");
         }
 
-        #endregion
+        #endregion Server Hooks (universal)
 
         #region Player Hooks (universal)
 
-        private object CanPlayerLogin(string name, string id, string ip)
+        private object CanUserLogin(string name, string id, string ip)
         {
             LogWarning($"{name} ({id}) at {ip} is attempting to login");
 
-            HookCalled("CanPlayerLogin");
+            HookCalled("CanUserLogin");
             return null;
         }
 
-        private void OnPlayerApproved(string name, string id, string ip)
+        private void OnUserApproved(string name, string id, string ip)
         {
             LogWarning($"{name} ({id}) at {ip} has been approved");
 
-            HookCalled("OnPlayerApproved");
+            HookCalled("OnUserApproved");
         }
 
-        private object OnPlayerChat(IPlayer player, string message)
+        private object OnUserChat(IPlayer player, string message)
         {
             LogWarning($"{player.Name} said: {message}");
 
-            HookCalled("OnPlayerChat");
+            HookCalled("OnUserChat");
             return null;
         }
 
-        private object OnPlayerCommand(IPlayer player, string command, string[] args)
+        private object OnUserCommand(IPlayer player, string command, string[] args)
         {
             LogWarning($"{player.Name} ({player.Id}) ran command: {command} {string.Join(" ", args)}");
 
-            HookCalled("OnPlayerCommand");
+            HookCalled("OnUserCommand");
             return null;
         }
 
-        private void OnPlayerConnected(IPlayer player)
+        private void OnUserConnected(IPlayer player)
         {
             LogWarning($"{player.Name} ({player.Id}) connected from {player.Address}");
             if (player.IsAdmin) LogWarning($"{player.Name} is admin");
@@ -156,67 +163,69 @@ namespace Oxide.Plugins
             server.Broadcast($"Welcome {player.Name} to {server.Name}!");
             foreach (var target in players.Connected) target.Message($"Look out... {player.Name} is coming to get you!");
 
-            HookCalled("OnPlayerConnected");
+            HookCalled("OnUserConnected");
         }
 
-        private void OnPlayerDisconnected(IPlayer player, string reason)
+        private void OnUserDisconnected(IPlayer player, string reason)
         {
             LogWarning($"{player.Name} ({player.Id}) disconnected for: {reason ?? "Unknown"}");
             server.Broadcast($"{player.Name} has abandoned us... free loot!");
 
-            HookCalled("OnPlayerDisconnected");
+            HookCalled("OnUserDisconnected");
         }
 
-        private void OnPlayerRespawn(IPlayer player)
+        private void OnUserRespawn(IPlayer player)
         {
             LogWarning($"{player.Name} is respawning now");
 
-            HookCalled("OnPlayerRespawn");
+            HookCalled("OnUserRespawn");
         }
 
-        private void OnPlayerRespawned(IPlayer player)
+        private void OnUserRespawned(IPlayer player)
         {
             LogWarning($"{player.Name} respawned at {player.Position()}");
 
-            HookCalled("OnPlayerRespawned");
+            HookCalled("OnUserRespawned");
         }
 
-        private void OnPlayerSpawn(IPlayer player)
+        private void OnUserSpawn(IPlayer player)
         {
             LogWarning($"{player.Name} is spawning now");
-
-            HookCalled("OnPlayerSpawn");
+            HookCalled("OnUserSpawn");
         }
 
-        private void OnPlayerSpawned(IPlayer player)
+        private void OnUserSpawned(IPlayer player)
         {
+            GenericPosition position = new GenericPosition((float)40.75811, (float)11.20799, (float)58.23539);
             LogWarning($"{player.Name} spawned at {player.Position()}");
+            LogWarning($"Teleporting {player.Name} to {position}");
+            player.Teleport(position);
 
-            HookCalled("OnPlayerSpawned");
+            HookCalled("OnUserSpawned");
         }
 
-        private void OnPlayerBanned(string name, string id, string address, string reason)
+        private void OnUserBanned(string name, string id, string address, string reason)
         {
             LogWarning($"Player {name} ({id}) was banned: {reason}");
 
-            HookCalled("OnPlayerBanned");
+            HookCalled("OnUserBanned");
         }
 
-        private void OnPlayerKicked(IPlayer player, string reason)
+        private void OnUserKicked(IPlayer player, string reason)
         {
             LogWarning($"Player {player.Name} ({player.Id}) was kicked");
 
-            HookCalled("OnPlayerKicked");
+            HookCalled("OnUserKicked");
         }
 
-        private void OnPlayerUnbanned(string name, string id, string ip)
+        private void OnUserUnbanned(string name, string id, string ip)
         {
             LogWarning($"Player {name} ({id}) was unbanned");
 
-            HookCalled("OnPlayerUnbanned");
+            HookCalled("OnUserUnbanned");
         }
 
-        #endregion
+        #endregion Player Hooks (universal)
 
         #region Permission Hooks (universal)
 
@@ -234,35 +243,56 @@ namespace Oxide.Plugins
             HookCalled("OnGroupPermissionRevoked");
         }
 
-        private void OnPlayerPermissionGranted(string id, string perm)
+        private void OnUserPermissionGranted(string id, string perm)
         {
             LogWarning($"Player '{id}' granted permission: {perm}");
 
-            HookCalled("OnPlayerPermissionGranted");
+            HookCalled("OnUserPermissionGranted");
         }
 
-        private void OnPlayerPermissionRevoked(string id, string perm)
+        private void OnUserPermissionRevoked(string id, string perm)
         {
             LogWarning($"Player '{id}' revoked permission: {perm}");
 
-            HookCalled("OnPlayerPermissionRevoked");
+            HookCalled("OnUserPermissionRevoked");
         }
 
-        private void OnPlayerGroupAdded(string id, string name)
+        private void OnUserGroupAdded(string id, string name)
         {
             LogWarning($"Player '{id}' added to group: {name}");
 
-            HookCalled("OnPlayerGroupAdded");
+            HookCalled("OnUserGroupAdded");
         }
 
-        private void OnPlayerGroupRemoved(string id, string name)
+        private void OnUserGroupRemoved(string id, string name)
         {
             LogWarning($"Player '{id}' removed from group: {name}");
 
-            HookCalled("OnPlayerGroupRemoved");
+            HookCalled("OnUserGroupRemoved");
         }
 
-        #endregion
+        #endregion Permission Hooks (universal)
+
+        #region Commands (universal)
+
+        [Command("dev.pos")]
+        private void PositionCommand(IPlayer player, string command, string[] args)
+        {
+            LogWarning($"Position for {player.Name} is {player.Position()}");
+            player.Reply($"Position for {player.Name} is {player.Position()}");
+        }
+
+        [Command("dev.tpto")]
+        private void TeleportToCommand(IPlayer player, string command, string[] args)
+        {
+            if (args.Length != 3) return;
+
+            player.Reply($"Teleporting {player.Name} to {args[0]}");
+            string[] position = args[0].Split(',');
+            player.Teleport(float.Parse(position[0].Trim()), float.Parse(position[1].Trim()), float.Parse(position[2].Trim()));
+        }
+
+        #endregion Commands (universal)
 
 #if HURTWORLD
 
@@ -273,9 +303,20 @@ namespace Oxide.Plugins
             HookCalled("OnEntitySpawned");
         }
 
-        #endregion
+        private void OnEntityTakeDamage(AIEntity entity, EntityEffectSourceData source)
+        {
+            HookCalled("OnEntityTakeDamage");
+        }
+
+        #endregion Entity Hooks
 
         #region Player Hooks
+
+        /*private bool CanCraft(PlayerSession session, CrafterServer crafter)
+        {
+            HookCalled("CanCraft");
+            return true;
+        }*/
 
         private void OnChatCommand(PlayerSession session, string command)
         {
@@ -290,11 +331,14 @@ namespace Oxide.Plugins
         private object OnPlayerChat(PlayerSession session, string message)
         {
             HookCalled("OnPlayerChat");
-            return true;
+
+            return null;
         }
 
         private void OnPlayerDisconnected(PlayerSession session)
         {
+            LogWarning($"{session.Identity.Name} ({session.SteamId}) disconnected");
+
             HookCalled("OnPlayerDisconnected");
         }
 
@@ -302,12 +346,6 @@ namespace Oxide.Plugins
         {
             HookCalled("OnPlayerDeath");
             return null;
-        }
-
-        private bool CanCraft(PlayerSession session, CrafterServer crafter)
-        {
-            HookCalled("CanCraft");
-            return true;
         }
 
         private bool CanUseMachine(PlayerSession session, BaseMachine<DrillMachine> machine)
@@ -336,7 +374,12 @@ namespace Oxide.Plugins
             HookCalled("OnPlayerInput");
         }
 
-        #endregion
+        private void OnPlayerTakeDamage(PlayerSession session, EntityEffectSourceData source)
+        {
+            HookCalled("OnPlayerTakeDamage");
+        }
+
+        #endregion Player Hooks
 
         #region Structure Hooks
 
@@ -380,7 +423,7 @@ namespace Oxide.Plugins
             HookCalled("OnSingleDoorUsed");
         }
 
-        #endregion
+        #endregion Structure Hooks
 
         #region Vehicle Hooks
 
@@ -406,7 +449,7 @@ namespace Oxide.Plugins
             HookCalled("OnExitVehicle");
         }
 
-        #endregion
+        #endregion Vehicle Hooks
 
 #endif
 
@@ -414,17 +457,17 @@ namespace Oxide.Plugins
 
         #region Entity Hooks
 
-        private void OnEntityHealthChange(EntityDamageEvent e)
+        private void OnEntityHealthChange(EntityDamageEvent evt)
         {
             HookCalled("OnEntityHealthChange");
         }
 
-        private void OnEntityDeath(EntityDeathEvent e)
+        private void OnEntityDeath(EntityDeathEvent evt)
         {
             HookCalled("OnEntityDeath");
         }
 
-        #endregion
+        #endregion Entity Hooks
 
         #region Player Hooks
 
@@ -448,32 +491,37 @@ namespace Oxide.Plugins
             HookCalled("OnPlayerDisconnected");
         }
 
-        private void OnPlayerSpawn(PlayerFirstSpawnEvent e)
+        private void OnPlayerSpawn(PlayerFirstSpawnEvent evt)
         {
             HookCalled("OnPlayerSpawn");
         }
 
-        private void OnPlayerRespawn(PlayerRespawnEvent e)
+        private void OnPlayerSpawned(PlayerPreSpawnCompleteEvent evt)
+        {
+            HookCalled("OnPlayerSpawned");
+        }
+
+        private void OnPlayerRespawn(PlayerRespawnEvent evt)
         {
             HookCalled("OnPlayerRespawn");
         }
 
-        private void OnPlayerChat(PlayerEvent e)
+        private void OnPlayerChat(PlayerMessageEvent evt)
         {
             HookCalled("OnPlayerChat");
         }
 
-        private void OnPlayerCapture(PlayerCaptureEvent e)
+        private void OnPlayerCapture(PlayerCaptureEvent evt)
         {
             HookCalled("OnPlayerCapture");
         }
 
-        private void OnPlayerRelease(PlayerEscapeEvent e)
+        private void OnPlayerRelease(PlayerEscapeEvent evt)
         {
             HookCalled("OnPlayerRelease");
         }
 
-        #endregion
+        #endregion Player Hooks
 
         #region Structure Hooks
 
@@ -492,36 +540,36 @@ namespace Oxide.Plugins
             HookCalled("OnCubeDestroyed");
         }
 
-        #endregion
+        #endregion Structure Hooks
 
         #region Throne Hooks
 
-        private void OnThroneCapture(AncientThroneCaptureEvent e)
+        private void OnThroneCapture(AncientThroneCaptureEvent evt)
         {
             HookCalled("OnThroneCapture");
         }
 
-        private void OnThroneCaptured(AncientThroneCaptureEvent e)
+        private void OnThroneCaptured(AncientThroneCaptureEvent evt)
         {
             HookCalled("OnThroneCaptured");
         }
 
-        private void OnThroneReleased(AncientThroneReleaseEvent e)
+        private void OnThroneReleased(AncientThroneReleaseEvent evt)
         {
             HookCalled("OnThroneReleased");
         }
 
-        private void OnThroneRename(AncientThroneRenameEvent e)
+        private void OnThroneRename(AncientThroneRenameEvent evt)
         {
             HookCalled("OnThroneRename");
         }
 
-        private void OnThroneTax(AncientThroneTaxEvent e)
+        private void OnThroneTax(AncientThroneTaxEvent evt)
         {
             HookCalled("OnThroneTax");
         }
 
-        #endregion
+        #endregion Throne Hooks
 
 #endif
 
@@ -552,7 +600,7 @@ namespace Oxide.Plugins
 
         private void OnSaveLoad(Dictionary<BaseEntity, ProtoBuf.Entity> dictionary)
         {
-            LogWarning($"{dictionary.Count} entiries loaded from save");
+            LogWarning($"{dictionary.Count} entities loaded from save");
 
             HookCalled("OnSaveLoad");
         }
@@ -560,8 +608,7 @@ namespace Oxide.Plugins
         private object OnServerCommand(ConsoleSystem.Arg arg)
         {
             var player = arg.Connection?.player as BasePlayer;
-            if (player != null) LogWarning($"{player.displayName} ({player.UserIDString}) ran command: {arg.cmd.FullName} {arg.FullString}");
-
+            LogWarning($"{(player == null ? "Server" : $"{player.displayName} ({player.UserIDString})")} ran command: {arg.cmd.FullName} {arg.FullString}");
             HookCalled("OnServerCommand");
             return null;
         }
@@ -576,7 +623,7 @@ namespace Oxide.Plugins
 
         private void OnTick() => HookCalled("OnTick");
 
-        #endregion
+        #endregion Server Hooks
 
         #region Player Hooks
 
@@ -839,7 +886,7 @@ namespace Oxide.Plugins
             return null;
         }
 
-        #endregion
+        #endregion Player Hooks
 
         #region Entity Hooks
 
@@ -885,7 +932,7 @@ namespace Oxide.Plugins
             return true;
         }
 
-        private bool CanNpcEat(BaseNpc npc, BaseEntity target)
+        private bool CanNpcEat(BaseNpc npc, BaseCombatEntity target)
         {
             HookCalled("CanNpcEat");
             return true;
@@ -985,15 +1032,17 @@ namespace Oxide.Plugins
             return null;
         }
 
-        private object OnNpcPlayerTarget(NPCPlayerApex npcPlayer, BaseEntity entity)
+        private object OnNpcPlayerTarget(BaseEntity npc, BaseEntity entity)
         {
+            LogWarning($"OnNpcPlayerTarget - {npc.ShortPrefabName} wants to target {entity?.ShortPrefabName}!");
             HookCalled("OnNpcPlayerTarget");
             return null;
         }
 
         private object OnNpcTarget(BaseNpc npc, BaseEntity entity)
         {
-            HookCalled("OnOvenToggle");
+            LogWarning($"OnNpcTarget - {npc.ShortPrefabName} wants to target {entity?.ShortPrefabName}!");
+            HookCalled("OnNpcTarget");
             return null;
         }
 
@@ -1061,7 +1110,7 @@ namespace Oxide.Plugins
             return null;
         }
 
-        #endregion
+        #endregion Entity Hooks
 
         #region Item Hooks
 
@@ -1102,7 +1151,7 @@ namespace Oxide.Plugins
             return ??; // TODO: Create Item
         }*/
 
-        private object OnItemAction(Item item, string action)
+        private object OnItemAction(Item item, string action, BasePlayer player)
         {
             HookCalled("OnItemAction");
             return null;
@@ -1230,7 +1279,7 @@ namespace Oxide.Plugins
             return null;
         }
 
-        #endregion
+        #endregion Item Hooks
 
         #region Resource Gathering Hooks
 
@@ -1273,7 +1322,7 @@ namespace Oxide.Plugins
             HookCalled("OnSurveyGather");
         }
 
-        #endregion
+        #endregion Resource Gathering Hooks
 
         #region Sign Hooks
 
@@ -1298,7 +1347,7 @@ namespace Oxide.Plugins
             HookCalled("OnSpinWheel");
         }
 
-        #endregion
+        #endregion Sign Hooks
 
         #region Structure Hooks
 
@@ -1314,7 +1363,7 @@ namespace Oxide.Plugins
             return true;
         }
 
-        private object CanBuild(Planner planner, Construction prefab, Vector3 position)
+        private object CanBuild(Planner planner, Construction prefab, Construction.Target target)
         {
             HookCalled("CanBuild");
             return null;
@@ -1445,7 +1494,7 @@ namespace Oxide.Plugins
             return null;
         }
 
-        #endregion
+        #endregion Structure Hooks
 
         #region Vending Hooks
 
@@ -1493,7 +1542,7 @@ namespace Oxide.Plugins
             return null;
         }
 
-        #endregion
+        #endregion Vending Hooks
 
         #region Weapon Hooks
 
@@ -1540,13 +1589,16 @@ namespace Oxide.Plugins
             HookCalled("OnWeaponFired");
         }
 
-        #endregion
+        #endregion Weapon Hooks
 
         [Command("dev.entityi")]
         private void EntityInfoCommand(IPlayer player, string command, string[] args)
         {
             var entity = FindEntity(player.Object as BasePlayer, 3);
-            if (entity != null) player.Reply($"Prefab: {entity.PrefabName}\nPrefab ID: {entity.prefabID.ToString()}\nNetwork ID: {entity.net.ID}");
+            if (entity != null)
+            {
+                player.Reply($"Prefab: {entity.PrefabName}\nPrefab ID: {entity.prefabID.ToString()}\nNetwork ID: {entity.net.ID}\nOwner ID: {entity.OwnerID}");
+            }
         }
 
         [Command("dev.entity")]
@@ -1583,7 +1635,7 @@ namespace Oxide.Plugins
         [Command("dev.heli")]
         private void HeliCommand(IPlayer player, string command, string[] args)
         {
-            var entity = GameManager.server.CreateEntity("assets/prefabs/npc/patrol helicopter/patrolhelicopter.prefab", new Vector3(), new Quaternion());
+            var entity = GameManager.server.CreateEntity("assets/prefabs/npc/patrol helicopter/patrolhelicopter.prefab");
             if (entity != null)
             {
                 var heli = entity.GetComponent<PatrolHelicopterAI>();
@@ -1592,34 +1644,81 @@ namespace Oxide.Plugins
             }
         }
 
-        static readonly FieldInfo viewAngles = typeof(BasePlayer).GetField("viewAngles", (BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static));
+        private Timer npcMove;
 
         [Command("dev.npc")]
         private void NpcCommand(IPlayer player, string command, string[] args)
         {
-            var pos = (player.Object as BasePlayer).transform.position;
-            var entity = GameManager.server.CreateEntity("assets/prefabs/player/player.prefab", new Vector3(pos.x, pos.y, pos.z - 20), new Quaternion());
-            var npc = entity as BasePlayer;
+            var basePlayer = player.Object as BasePlayer;
+            var pos = basePlayer.transform.position;
+
+            BasePlayer npc;
+            var type = args.Length > 0 ? args[0] : null;
+            switch (type)
+            {
+                case "mur":
+                case "murderer":
+                {
+                    var entity = GameManager.server.CreateEntity("assets/prefabs/npc/murderer/murderer.prefab",
+                        new Vector3(pos.x + 1, pos.y, pos.z), new Quaternion());
+                    npc = entity as NPCPlayer;
+                    break;
+                }
+
+                case "sci":
+                case "scientist":
+                {
+                    var entity = GameManager.server.CreateEntity("assets/prefabs/npc/scientist/scientist.prefab",
+                        new Vector3(pos.x + 1, pos.y, pos.z), new Quaternion());
+                    npc = entity as NPCPlayerApex;
+                    break;
+                }
+
+                default:
+                {
+                    var entity = GameManager.server.CreateEntity("assets/prefabs/player/player.prefab",
+                        new Vector3(pos.x + 1, pos.y, pos.z), new Quaternion());
+                    npc = entity as BasePlayer;
+                    break;
+                }
+            }
+
             if (npc != null)
             {
                 npc.Spawn();
+                // TODO: Give some items
+                if (npc is BasePlayer)
+                {
+                    npc.displayName = "Bob";
+                    npcMove = timer.Every(0.1f, () =>
+                    {
+                        if (basePlayer.IsDead() || npc.IsDead() || basePlayer.IsWounded() || npc.IsWounded())
+                        {
+                            npcMove.Destroy();
+                            return;
+                        }
+
+                        var newPos = player.Position();
+                        npc.MovePosition(new Vector3(newPos.X + 1, newPos.Y, newPos.Z + 1));
+                        npc.transform.rotation = basePlayer.transform.rotation;
+                    });
+                }
+                npc.SendNetworkUpdate();
+            }
+        }
+
+        [Command("dev.npc murderer")]
+        private void MurdererCommand(IPlayer player, string command, string[] args)
+        {
+            var pos = (player.Object as BasePlayer).transform.position;
+            var entity = GameManager.server.CreateEntity("assets/prefabs/npc/murderer/murderer.prefab", new Vector3(pos.x + 1, pos.y, pos.z));
+            var npc = entity as NPCPlayer;
+            if (npc != null)
+            {
+                npc.Spawn();
+                // TODO: Give some items
                 npc.displayName = "Bob";
-                //viewAngles.SetValue(npc, viewAngles.eulerAngles);
-                npc.SendNetworkUpdate(BasePlayer.NetworkQueue.Update);
-                npc.syncPosition = true;
-                npc.stats = new PlayerStatistics(npc);
-                npc.userID = 70000000000000000L;
-                npc.UserIDString = npc.userID.ToString();
-                npc.MovePosition(pos);
-                npc.eyes = npc.eyes ?? npc.GetComponent<PlayerEyes>();
-                var newEyes = pos + new Vector3(0, 1.6f, 0);
-                npc.eyes.position.Set(newEyes.x, newEyes.y, newEyes.z);
-                npc.EndSleeping();
-                //if (locomotion != null) Destroy(locomotion);
-                //locomotion = npc.gameObject.AddComponent<HumanLocomotion>();
-                //if (trigger != null) Destroy(trigger);
-                //trigger = npc.gameObject.AddComponent<HumanTrigger>();
-                //timer.Every(1f, () => npc.MovePosition(new Vector3(pos.x, pos.y, pos.z + 5)));
+                npc.SendNetworkUpdate();
             }
         }
 
@@ -1659,9 +1758,33 @@ namespace Oxide.Plugins
             return Physics.Raycast(ray, out hit, distance) ? hit.GetEntity() : null;
         }
 
+        [Command("dev.view1")]
+        private void View1Command(IPlayer player, string command, string[] args)
+        {
+            BasePlayer basePlayer = player.Object as BasePlayer;
+            basePlayer.SetPlayerFlag(BasePlayer.PlayerFlags.EyesViewmode, false);
+            basePlayer.SetPlayerFlag(BasePlayer.PlayerFlags.ThirdPersonViewmode, false);
+        }
+
+        [Command("dev.view2")]
+        private void View2Command(IPlayer player, string command, string[] args)
+        {
+            BasePlayer basePlayer = player.Object as BasePlayer;
+            basePlayer.SetPlayerFlag(BasePlayer.PlayerFlags.EyesViewmode, true);
+            basePlayer.SetPlayerFlag(BasePlayer.PlayerFlags.ThirdPersonViewmode, false);
+        }
+
+        [Command("dev.view3")]
+        private void View3Command(IPlayer player, string command, string[] args)
+        {
+            BasePlayer basePlayer = player.Object as BasePlayer;
+            basePlayer.SetPlayerFlag(BasePlayer.PlayerFlags.EyesViewmode, false);
+            basePlayer.SetPlayerFlag(BasePlayer.PlayerFlags.ThirdPersonViewmode, true);
+        }
+
 #endif
 
-#if SEVENDAYS
+#if SEVENDAYSTODIE
 
         #region Server Hooks
 
@@ -1671,7 +1794,7 @@ namespace Oxide.Plugins
             return null;
         }
 
-        #endregion
+        #endregion Server Hooks
 
         #region Entity Hooks
 
@@ -1695,7 +1818,7 @@ namespace Oxide.Plugins
             HookCalled("OnEntityDeath");
         }
 
-        #endregion
+        #endregion Entity Hooks
 
         #region Player Hooks
 
@@ -1725,7 +1848,7 @@ namespace Oxide.Plugins
             LogWarning("OnExperienceGained");
         }
 
-        #endregion
+        #endregion Player Hooks
 
 #endif
 
@@ -1740,7 +1863,7 @@ namespace Oxide.Plugins
             return null;
         }
 
-        #endregion
+        #endregion Server Hooks
 
         #region Player Hooks
 
@@ -1778,7 +1901,7 @@ namespace Oxide.Plugins
             return null;
         }
 
-        #endregion
+        #endregion Player Hooks
 
 #endif
 
@@ -1792,7 +1915,7 @@ namespace Oxide.Plugins
             return null;
         }
 
-        #endregion
+        #endregion Server Hooks
 
 #endif
     }
